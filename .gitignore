@@ -1,0 +1,19 @@
+# vim
+*.sw[op]
+*~
+# python
+*.egg*
+*.py[co]
+.cache
+.coverage
+.ipynb_checkpoints
+.pytest_cache
+__pycache__
+build/
+dist/
+.tox
+# transient
+*.log
+*.tmp
+*_data
+.DS_Store
