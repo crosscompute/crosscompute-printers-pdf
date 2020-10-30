@@ -31,7 +31,7 @@ setup(
     classifiers=APPLICATION_CLASSIFIERS,
     author='CrossCompute Inc',
     author_email='support@crosscompute.com',
-    url='https://github.com/crosscompute/crosscompute',
+    url='https://github.com/crosscompute/crosscompute-prints',
     keywords='crosscompute',
     packages=find_packages(),
     include_package_data=True,
