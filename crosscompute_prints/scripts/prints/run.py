@@ -39,6 +39,8 @@ def run(host, token):
 
 
 async def do(print_id, document_count, file_url):
+    browser = await launch()
+    page = await browser.newPage()
     with TemporaryStorage() as storage:
         storage_folder = storage.folder
         documents_folder = make_folder(join(storage_folder, 'documents'))
@@ -46,16 +48,10 @@ async def do(print_id, document_count, file_url):
             url = f'{CLIENT_HOST}/prints/{print_id}/documents/{document_index}'
             print(url)
             target_path = join(documents_folder, f'{document_index}.pdf')
-            await save_pdf(target_path, url)
+            await page.goto(url, {'waitUntil': 'networkidle2'})
+            await page.pdf({'path': target_path})
         archive_path = archive_safely(documents_folder)
         with open(archive_path, 'rb') as data:
             response = requests.put(file_url, data=data)
-        print(response.__dict__)
-
-
-async def save_pdf(target_path, url):
-    browser = await launch()
-    page = await browser.newPage()
-    await page.goto(url, {'waitUntil': 'networkidle2'})
-    await page.pdf({'path': target_path})
+            print(response.__dict__)
     await browser.close()
