@@ -2,7 +2,8 @@ import asyncio
 import json
 import requests
 from crosscompute.scripts import AuthenticatingScript
-from invisibleroads_macros_disk import TemporaryStorage, archive_safely
+from invisibleroads_macros_disk import (
+    TemporaryStorage, archive_safely, make_folder)
 from os.path import join
 from pyppeteer import launch
 from sseclient import SSEClient
@@ -40,7 +41,7 @@ def run(host, token):
 async def do(print_id, document_count, file_url):
     with TemporaryStorage() as storage:
         storage_folder = storage.folder
-        documents_folder = join(storage_folder, 'documents')
+        documents_folder = make_folder(join(storage_folder, 'documents'))
         for document_index in range(document_count):
             url = f'{CLIENT_HOST}/prints/{print_id}/documents/{document_index}'
             print(url)
@@ -48,7 +49,8 @@ async def do(print_id, document_count, file_url):
             await save_pdf(target_path, url)
         archive_path = archive_safely(documents_folder)
         with open(archive_path, 'rb') as data:
-            requests.put(file_url, data=data)
+            response = requests.put(file_url, data=data)
+        print(response.__dict__)
 
 
 async def save_pdf(target_path, url):
