@@ -18,11 +18,11 @@ class RunPrinterScript(AuthenticatingScript):
     def run(self, args, argv):
         super().run(args, argv)
         client_url = get_client_url()
-        return run(args.server_url, args.server_token, client_url)
+        return run(args.server_url, args.token, client_url)
 
 
-def run(server_url, server_token, client_url):
-    echoes_client = get_echoes_client(server_url, server_token)
+def run(server_url, token, client_url):
+    echoes_client = get_echoes_client(server_url, token)
     for echo_message in echoes_client:
         print(echo_message.__dict__)
         if echo_message.event == 'w':
