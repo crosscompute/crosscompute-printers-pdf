@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 ENTRY_POINTS = '''
 [crosscompute]
-prints.run = crosscompute_prints.scripts.prints.run:RunPrinterScript
+printers.run = crosscompute_prints.scripts.printers.run:RunPrinterScript
 '''
 APPLICATION_CLASSIFIERS = [
     'Programming Language :: Python :: 3',

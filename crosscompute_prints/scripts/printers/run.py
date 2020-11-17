@@ -4,35 +4,55 @@
 import asyncio
 import json
 import requests
+from collections import defaultdict
 from crosscompute.routines import (
-    get_client_url, get_echoes_client)
-from crosscompute.scripts import AuthenticatingScript
+    get_client_url,
+    get_echoes_client,
+    get_server_url,
+    render_object)
+from crosscompute.scripts import OutputtingScript, run_safely
 from invisibleroads_macros_disk import (
     TemporaryStorage, archive_safely, make_folder)
 from os.path import join
 from pyppeteer import launch
 
 
-class RunPrinterScript(AuthenticatingScript):
+class RunPrinterScript(OutputtingScript):
 
     def run(self, args, argv):
         super().run(args, argv)
-        client_url = get_client_url()
-        return run(args.server_url, args.token, client_url)
+        is_quiet = args.is_quiet
+        as_json = args.as_json
+
+        run_safely(run_prints, [
+        ], is_quiet, as_json)
 
 
-def run(server_url, token, client_url):
-    echoes_client = get_echoes_client(server_url, token)
-    for echo_message in echoes_client:
-        print(echo_message.__dict__)
-        if echo_message.event == 'w':
-            d = json.loads(echo_message.data)
-            print_id = d['x']
-            file_url = d['@']
-            asyncio.run(do(print_id, server_url, client_url, file_url))
+def run_prints(is_quiet=False, as_json=False):
+    prints_dictionary = defaultdict(int)
+    try:
+        for echo_message in get_echoes_client():
+            event_name = echo_message.event
+            if event_name == 'message':
+                if not is_quiet and not as_json:
+                    print('.', end='', flush=True)
+                prints_dictionary['ping count'] += 1
+            elif not is_quiet:
+                print('\n' + render_object(echo_message.__dict__, as_json))
+
+            if event_name == 'w':
+                d = json.loads(echo_message.data)
+                print_id = d['x']
+                file_url = d['@']
+                asyncio.run(do(print_id, file_url))
+    except KeyboardInterrupt:
+        pass
+    return dict(prints_dictionary)
 
 
-async def do(print_id, server_url, client_url, file_url):
+async def do(print_id, file_url):
+    client_url = get_client_url()
+    server_url = get_server_url()
     url = f'{server_url}/prints/{print_id}.json'
     response = requests.get(url)
     print_dictionary = response.json()
