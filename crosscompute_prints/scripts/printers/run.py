@@ -24,11 +24,11 @@ class RunPrinterScript(OutputtingScript):
         is_quiet = args.is_quiet
         as_json = args.as_json
 
-        run_safely(run_prints, [
+        run_safely(run_printer, [
         ], is_quiet, as_json)
 
 
-def run_prints(is_quiet=False, as_json=False):
+def run_printer(is_quiet=False, as_json=False):
     prints_dictionary = defaultdict(int)
     try:
         for echo_message in get_echoes_client():
