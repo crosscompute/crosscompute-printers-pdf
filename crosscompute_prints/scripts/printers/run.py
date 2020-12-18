@@ -24,8 +24,8 @@ class RunPrinterScript(OutputtingScript):
         is_quiet = args.is_quiet
         as_json = args.as_json
 
-        run_safely(run_printer, [
-        ], is_quiet, as_json)
+        run_safely(run_printer, {
+        }, is_quiet, as_json)
 
 
 def run_printer(is_quiet=False, as_json=False):
