@@ -69,7 +69,7 @@ async def do(print_id, file_url):
             url = f'{client_url}/prints/{print_id}/documents/{document_index}'
             print(url, target_path)
             await page.goto(url, {'waitUntil': 'networkidle2'})
-            await page.pdf({'path': target_path})
+            await page.pdf({'path': target_path, 'printBackground': True})
         archive_path = archive_safely(documents_folder)
         with open(archive_path, 'rb') as data:
             response = requests.put(file_url, data=data)
