@@ -76,7 +76,8 @@ async def do(print_id, file_url):
                     await page.goto(url, {'waitUntil': 'networkidle2'})
                     break
                 except TimeoutError:
-                    os.system('pkill -9 chrome')
+                    # os.system('pkill -9 chrome')
+                    pass
 
             await page.pdf({'path': target_path, 'printBackground': True})
         archive_path = archive_safely(documents_folder)
@@ -84,3 +85,4 @@ async def do(print_id, file_url):
             response = requests.put(file_url, data=data)
             print(response.__dict__)
     await browser.close()
+    # os.system('pkill -9 chrome')
