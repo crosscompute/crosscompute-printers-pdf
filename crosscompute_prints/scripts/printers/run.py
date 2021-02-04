@@ -3,6 +3,7 @@
 # TODO: Consider merging into crosscompute workers run
 import asyncio
 import json
+import os
 import requests
 from collections import defaultdict
 from crosscompute.routines import (
@@ -15,6 +16,7 @@ from invisibleroads_macros_disk import (
     TemporaryStorage, archive_safely, make_folder)
 from os.path import join
 from pyppeteer import launch
+from pyppeteer.errors import TimeoutError
 
 
 class RunPrinterScript(OutputtingScript):
@@ -68,7 +70,14 @@ async def do(print_id, file_url):
             target_path = join(documents_folder, target_name + '.pdf')
             url = f'{client_url}/prints/{print_id}/documents/{document_index}'
             print(url, target_path)
-            await page.goto(url, {'waitUntil': 'networkidle2'})
+
+            while True:
+                try:
+                    await page.goto(url, {'waitUntil': 'networkidle2'})
+                    break
+                except TimeoutError:
+                    os.system('pkill -9 chrome')
+
             await page.pdf({'path': target_path, 'printBackground': True})
         archive_path = archive_safely(documents_folder)
         with open(archive_path, 'rb') as data:
