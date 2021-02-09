@@ -2,21 +2,28 @@
 # TODO: Consider print chore query for parallelization
 # TODO: Consider merging into crosscompute workers run
 import asyncio
-import json
+# import json
 import os
 import requests
+import time
 from collections import defaultdict
+from crosscompute.exceptions import (
+    CrossComputeConnectionError,
+    CrossComputeKeyboardInterrupt)
 from crosscompute.routines import (
     get_client_url,
-    get_echoes_client,
+    # get_echoes_client,
     get_server_url,
-    render_object)
+    # render_object,
+    yield_echo)
 from crosscompute.scripts import OutputtingScript, run_safely
 from invisibleroads_macros_disk import (
     TemporaryStorage, archive_safely, make_folder)
 from os.path import join
 from pyppeteer import launch
 from pyppeteer.errors import TimeoutError
+from sys import exc_info
+from traceback import print_exception
 
 
 class RunPrinterScript(OutputtingScript):
@@ -31,25 +38,34 @@ class RunPrinterScript(OutputtingScript):
 
 
 def run_printer(is_quiet=False, as_json=False):
-    prints_dictionary = defaultdict(int)
-    try:
-        for echo_message in get_echoes_client():
-            event_name = echo_message.event
-            if event_name == 'message':
-                if not is_quiet and not as_json:
-                    print('.', end='', flush=True)
-                prints_dictionary['ping count'] += 1
-            elif not is_quiet:
-                print('\n' + render_object(echo_message.__dict__, as_json))
+    d = defaultdict(int)
+    # TODO: Move loop to yield_echo
+    while True:
+        try:
+            for [
+                event_name, event_dictionary,
+            ] in yield_echo(d, is_quiet, as_json):
+                if event_name == 'w' or d['ping count'] % 100 == 0:
+                    d['result count'] += process_print_input_stream(
+                        event_dictionary, is_quiet, as_json)
+        except CrossComputeKeyboardInterrupt:
+            break
+        except (
+            CrossComputeConnectionError,
+            requests.exceptions.HTTPError,
+        ) as e:
+            print(e)
+            time.sleep(1)
+        except Exception:
+            print_exception(*exc_info())
+            time.sleep(1)
+    return dict(d)
 
-            if event_name == 'w':
-                d = json.loads(echo_message.data)
-                print_id = d['x']
-                file_url = d['@']
-                asyncio.run(do(print_id, file_url))
-    except KeyboardInterrupt:
-        pass
-    return dict(prints_dictionary)
+
+def process_print_input_stream(event_dictionary, is_quiet, as_json):
+    print_id = event_dictionary['x']
+    file_url = event_dictionary['@']
+    asyncio.run(do(print_id, file_url))
 
 
 async def do(print_id, file_url):
