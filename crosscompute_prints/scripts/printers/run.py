@@ -76,8 +76,9 @@ async def do(print_id, file_url):
                     await page.goto(url, {'waitUntil': 'networkidle2'})
                     break
                 except TimeoutError:
-                    # os.system('pkill -9 chrome')
-                    pass
+                    os.system('pkill -9 chrome')
+                    browser = await launch()
+                    page = await browser.newPage()
 
             await page.pdf({'path': target_path, 'printBackground': True})
         archive_path = archive_safely(documents_folder)
