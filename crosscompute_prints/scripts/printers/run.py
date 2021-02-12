@@ -66,6 +66,7 @@ def process_print_input_stream(event_dictionary, is_quiet, as_json):
     print_id = event_dictionary['x']
     file_url = event_dictionary['@']
     asyncio.run(do(print_id, file_url))
+    return 1
 
 
 async def do(print_id, file_url):
