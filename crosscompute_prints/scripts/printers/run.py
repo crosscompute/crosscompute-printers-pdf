@@ -73,8 +73,7 @@ async def do(print_id, file_url):
     client_url = get_client_url()
     server_url = get_server_url()
     url = f'{server_url}/prints/{print_id}.json'
-    response = requests.get(url)
-    print_dictionary = response.json()
+    print_dictionary = requests.get(url).json()
     document_dictionaries = print_dictionary['documents']
     with TemporaryStorage() as storage:
         storage_folder = storage.folder
@@ -83,12 +82,10 @@ async def do(print_id, file_url):
                 document_dictionaries):
             browser = await launch()
             page = await browser.newPage()
-
             target_name = document_dictionary['name']
             target_path = join(documents_folder, target_name + '.pdf')
             url = f'{client_url}/prints/{print_id}/documents/{document_index}'
             print(url, target_path)
-
             while True:
                 try:
                     await page.goto(url, {'waitUntil': 'networkidle2'})
@@ -97,8 +94,21 @@ async def do(print_id, file_url):
                     os.system('pkill -9 chrome')
                     browser = await launch()
                     page = await browser.newPage()
-
-            await page.pdf({'path': target_path, 'printBackground': True})
+            d = {
+                'path': target_path,
+                'printBackground': True,
+                'displayHeaderFooter': True,
+            }
+            if 'header' in document_dictionary:
+                d['headerTemplate'] = document_dictionary['header']
+            else:
+                d['headerTemplate'] = ''
+            if 'footer' in document_dictionary:
+                d['footerTemplate'] = document_dictionary['footer']
+            else:
+                d['footerTemplate'] = ''
+            print(d)
+            await page.pdf(d)
             await browser.close()
         archive_path = archive_safely(documents_folder)
         with open(archive_path, 'rb') as data:
