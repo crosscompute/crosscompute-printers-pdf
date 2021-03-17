@@ -102,11 +102,11 @@ async def do(print_id, file_url):
             if 'header' in document_dictionary:
                 d['headerTemplate'] = document_dictionary['header']
             else:
-                d['headerTemplate'] = ''
+                d['headerTemplate'] = '<span />'
             if 'footer' in document_dictionary:
                 d['footerTemplate'] = document_dictionary['footer']
             else:
-                d['footerTemplate'] = ''
+                d['footerTemplate'] = '<span />'
             print(d)
             await page.pdf(d)
             await browser.close()
