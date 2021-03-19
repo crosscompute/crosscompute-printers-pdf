@@ -7,6 +7,7 @@ import os
 import requests
 import time
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from crosscompute.exceptions import (
     CrossComputeConnectionError,
     CrossComputeKeyboardInterrupt)
@@ -19,6 +20,7 @@ from crosscompute.routines import (
 from crosscompute.scripts import OutputtingScript, run_safely
 from invisibleroads_macros_disk import (
     TemporaryStorage, archive_safely, make_folder)
+from itertools import repeat
 from os.path import join
 from pyppeteer import launch
 from pyppeteer.errors import TimeoutError
@@ -78,39 +80,52 @@ async def do(print_id, file_url):
     with TemporaryStorage() as storage:
         storage_folder = storage.folder
         documents_folder = make_folder(join(storage_folder, 'documents'))
-        for document_index, document_dictionary in enumerate(
-                document_dictionaries):
-            browser = await launch()
-            page = await browser.newPage()
-            target_name = document_dictionary['name']
-            target_path = join(documents_folder, target_name + '.pdf')
-            url = f'{client_url}/prints/{print_id}/documents/{document_index}'
-            print(url, target_path)
-            while True:
-                try:
-                    await page.goto(url, {'waitUntil': 'networkidle2'})
-                    break
-                except TimeoutError:
-                    os.system('pkill -9 chrome')
-                    browser = await launch()
-                    page = await browser.newPage()
-            d = {
-                'path': target_path,
-                'printBackground': True,
-                'displayHeaderFooter': True,
-            }
-            if 'header' in document_dictionary:
-                d['headerTemplate'] = document_dictionary['header']
-            else:
-                d['headerTemplate'] = '<span />'
-            if 'footer' in document_dictionary:
-                d['footerTemplate'] = document_dictionary['footer']
-            else:
-                d['footerTemplate'] = '<span />'
-            print(d)
-            await page.pdf(d)
-            await browser.close()
+        with ThreadPoolExecutor() as executor:
+            executor.map(
+                print_document,
+                enumerate(document_dictionaries),
+                repeat(documents_folder),
+                repeat(client_url),
+                repeat(print_id))
         archive_path = archive_safely(documents_folder)
         with open(archive_path, 'rb') as data:
             response = requests.put(file_url, data=data)
             print(response.__dict__)
+
+
+async def print_document(
+        enumerated_document_dictionary,
+        documents_folder,
+        client_url,
+        print_id):
+    document_index, document_dictionary = enumerated_document_dictionary
+    browser = await launch()
+    page = await browser.newPage()
+    target_name = document_dictionary['name']
+    target_path = join(documents_folder, target_name + '.pdf')
+    url = f'{client_url}/prints/{print_id}/documents/{document_index}'
+    print(url, target_path)
+    while True:
+        try:
+            await page.goto(url, {'waitUntil': 'networkidle2'})
+            break
+        except TimeoutError:
+            os.system('pkill -9 chrome')
+            browser = await launch()
+            page = await browser.newPage()
+    d = {
+        'path': target_path,
+        'printBackground': True,
+        'displayHeaderFooter': True,
+    }
+    if 'header' in document_dictionary:
+        d['headerTemplate'] = document_dictionary['header']
+    else:
+        d['headerTemplate'] = '<span />'
+    if 'footer' in document_dictionary:
+        d['footerTemplate'] = document_dictionary['footer']
+    else:
+        d['footerTemplate'] = '<span />'
+    print(d)
+    await page.pdf(d)
+    await browser.close()
