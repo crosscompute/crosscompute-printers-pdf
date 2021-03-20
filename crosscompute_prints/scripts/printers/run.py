@@ -91,28 +91,23 @@ def process_print_input_stream(event_dictionary, is_quiet, as_json):
 
 
 async def print_document(
-        enumerated_document_dictionary,
-        documents_folder,
-        client_url,
+        enumerated_document_dictionary, documents_folder, client_url,
         print_id):
     document_index, document_dictionary = enumerated_document_dictionary
-    browser = await launch()
-    page = await browser.newPage()
     target_name = document_dictionary['name']
     target_path = join(documents_folder, target_name + '.pdf')
     url = f'{client_url}/prints/{print_id}/documents/{document_index}'
     print(url, target_path)
     while True:
+        browser = await launch()
+        page = await browser.newPage()
         try:
             await page.goto(url, {'waitUntil': 'networkidle2'})
             break
         except TimeoutError:
             os.system('pkill -9 chrome')
-            browser = await launch()
-            page = await browser.newPage()
     d = {
-        'path': target_path,
-        'printBackground': True,
+        'path': target_path, 'printBackground': True,
         'displayHeaderFooter': True,
     }
     if 'header' in document_dictionary:
