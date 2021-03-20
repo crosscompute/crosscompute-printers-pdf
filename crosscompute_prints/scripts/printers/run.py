@@ -7,7 +7,6 @@ import os
 import requests
 import time
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor
 from crosscompute.exceptions import (
     CrossComputeConnectionError,
     CrossComputeKeyboardInterrupt)
@@ -20,7 +19,6 @@ from crosscompute.routines import (
 from crosscompute.scripts import OutputtingScript, run_safely
 from invisibleroads_macros_disk import (
     TemporaryStorage, archive_safely, make_folder)
-from itertools import repeat
 from os.path import join
 from pyppeteer import launch
 from pyppeteer.errors import TimeoutError
@@ -67,11 +65,6 @@ def run_printer(is_quiet=False, as_json=False):
 def process_print_input_stream(event_dictionary, is_quiet, as_json):
     print_id = event_dictionary['x']
     file_url = event_dictionary['@']
-    asyncio.run(do(print_id, file_url))
-    return 1
-
-
-async def do(print_id, file_url):
     client_url = get_client_url()
     server_url = get_server_url()
     url = f'{server_url}/prints/{print_id}.json'
@@ -80,17 +73,18 @@ async def do(print_id, file_url):
     with TemporaryStorage() as storage:
         storage_folder = storage.folder
         documents_folder = make_folder(join(storage_folder, 'documents'))
-        with ThreadPoolExecutor() as executor:
-            executor.map(
-                print_document,
-                enumerate(document_dictionaries),
-                repeat(documents_folder),
-                repeat(client_url),
-                repeat(print_id))
+
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(asyncio.wait([print_document(
+            _, documents_folder, client_url, print_id,
+        ) for _ in enumerate(document_dictionaries)]))
+        loop.close()
+
         archive_path = archive_safely(documents_folder)
         with open(archive_path, 'rb') as data:
             response = requests.put(file_url, data=data)
             print(response.__dict__)
+    return 1
 
 
 async def print_document(
