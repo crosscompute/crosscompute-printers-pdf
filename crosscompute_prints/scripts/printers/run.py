@@ -74,11 +74,9 @@ def process_print_input_stream(event_dictionary, is_quiet, as_json):
         storage_folder = storage.folder
         documents_folder = make_folder(join(storage_folder, 'documents'))
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(asyncio.wait([print_document(
+        asyncio.run(asyncio.wait([print_document(
             _, documents_folder, client_url, print_id,
         ) for _ in enumerate(document_dictionaries)]))
-        loop.close()
 
         archive_path = archive_safely(documents_folder)
         with open(archive_path, 'rb') as data:
@@ -120,6 +118,5 @@ async def print_document(
         d['footerTemplate'] = document_dictionary['footer']
     else:
         d['footerTemplate'] = '<span />'
-    print(d)
     await page.pdf(d)
     await browser.close()
