@@ -73,11 +73,16 @@ def process_print_input_stream(event_dictionary, is_quiet, as_json):
     with TemporaryStorage() as storage:
         storage_folder = storage.folder
         documents_folder = make_folder(join(storage_folder, 'documents'))
-
+        '''
         asyncio.run(asyncio.wait([print_document(
             _, documents_folder, client_url, print_id,
         ) for _ in enumerate(document_dictionaries)]))
-
+        '''
+        for enumerated_document_dictionary in enumerate(
+                document_dictionaries):
+            asyncio.run(print_document(
+                enumerated_document_dictionary, documents_folder, client_url,
+                print_id))
         archive_path = archive_safely(documents_folder)
         with open(archive_path, 'rb') as data:
             response = requests.put(file_url, data=data)
