@@ -1,6 +1,7 @@
 # TODO: Consider print chore query in case echoes are missed
 # TODO: Consider print chore query for parallelization
 # TODO: Consider merging into crosscompute workers run
+
 import asyncio
 # import json
 import os
@@ -98,6 +99,7 @@ async def do(print_id, file_url):
                 'path': target_path,
                 'printBackground': True,
                 'displayHeaderFooter': True,
+                'margin': { 'bottom': '70px' }
             }
             if 'header' in document_dictionary:
                 d['headerTemplate'] = document_dictionary['header']
@@ -110,6 +112,7 @@ async def do(print_id, file_url):
             print(d)
             await page.pdf(d)
             await browser.close()
+
         archive_path = archive_safely(documents_folder)
         with open(archive_path, 'rb') as data:
             response = requests.put(file_url, data=data)
