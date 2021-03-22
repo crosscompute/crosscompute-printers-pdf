@@ -3,6 +3,7 @@
 # TODO: Consider merging into crosscompute workers run
 import asyncio
 # import json
+# import msgpack
 import os
 import requests
 import time
@@ -17,13 +18,18 @@ from crosscompute.routines import (
     # render_object,
     yield_echo)
 from crosscompute.scripts import OutputtingScript, run_safely
-from invisibleroads_macros_disk import (
-    TemporaryStorage, archive_safely, make_folder)
-from os.path import join
+from glob import glob
+from invisibleroads_macros_disk import archive_safely, make_folder
+from os import remove
+from os.path import expanduser, join
 from pyppeteer import launch
 from pyppeteer.errors import TimeoutError
+from shutil import rmtree
 from sys import exc_info
 from traceback import print_exception
+
+
+STORAGE_FOLDER = expanduser('~/.crosscompute')
 
 
 class RunPrinterScript(OutputtingScript):
@@ -63,39 +69,39 @@ def run_printer(is_quiet=False, as_json=False):
 
 
 def process_print_input_stream(event_dictionary, is_quiet, as_json):
+    prints_folder = join(STORAGE_FOLDER, 'prints')
     print_id = event_dictionary['x']
-    file_url = event_dictionary['@']
-    client_url = get_client_url()
-    server_url = get_server_url()
-    url = f'{server_url}/prints/{print_id}.json'
-    print_dictionary = requests.get(url).json()
-    document_dictionaries = print_dictionary['documents']
-    with TemporaryStorage() as storage:
-        storage_folder = storage.folder
-        documents_folder = make_folder(join(storage_folder, 'documents'))
-        '''
-        asyncio.run(asyncio.wait([print_document(
-            _, documents_folder, client_url, print_id,
-        ) for _ in enumerate(document_dictionaries)]))
-        '''
-        for enumerated_document_dictionary in enumerate(
-                document_dictionaries):
-            asyncio.run(print_document(
-                enumerated_document_dictionary, documents_folder, client_url,
-                print_id))
-        archive_path = archive_safely(documents_folder)
-        with open(archive_path, 'rb') as data:
-            response = requests.put(file_url, data=data)
-            print(response.__dict__)
+    print_folder = make_folder(join(prints_folder, print_id))
+
+    if '?' in event_dictionary:
+        document_index = event_dictionary['?']
+        server_url = get_server_url()
+        client_url = get_client_url()
+        url = f'{server_url}/prints/{print_id}/documents/{document_index}.json'
+        document_dictionary = requests.get(url).json()
+        # path = join(print_folder, str(document_index) + '.msgpack')
+        # msgpack.dump(document_dictionary, open(path, 'wb'))
+        future = print_document(
+            (document_index, document_dictionary), print_folder,
+            client_url, print_id)
+    elif '@' in event_dictionary:
+        document_count = event_dictionary['#']
+        file_url = event_dictionary['@']
+
+        def is_ready():
+            return len(glob(join(print_folder, '*.pdf'))) == document_count
+
+        future = make_archive(is_ready, print_folder, file_url)
+    asyncio.run(future)
     return 1
 
 
 async def print_document(
-        enumerated_document_dictionary, documents_folder, client_url,
+        enumerated_document_dictionary, target_folder, client_url,
         print_id):
     document_index, document_dictionary = enumerated_document_dictionary
     target_name = document_dictionary['name']
-    target_path = join(documents_folder, target_name + '.pdf')
+    target_path = join(target_folder, target_name + '.pdf')
     url = f'{client_url}/prints/{print_id}/documents/{document_index}'
     print(url, target_path)
     while True:
@@ -106,17 +112,22 @@ async def print_document(
             break
         except TimeoutError:
             os.system('pkill -9 chrome')
-    d = {
-        'path': target_path, 'printBackground': True,
+    await page.pdf({
+        'path': target_path,
+        'printBackground': True,
         'displayHeaderFooter': True,
-    }
-    if 'header' in document_dictionary:
-        d['headerTemplate'] = document_dictionary['header']
-    else:
-        d['headerTemplate'] = '<span />'
-    if 'footer' in document_dictionary:
-        d['footerTemplate'] = document_dictionary['footer']
-    else:
-        d['footerTemplate'] = '<span />'
-    await page.pdf(d)
+        'headerTemplate': document_dictionary.get('header') or '<span />',
+        'footerTemplate': document_dictionary.get('footer') or '<span />',
+    })
     await browser.close()
+
+
+async def make_archive(is_ready, print_folder, file_url):
+    while not is_ready():
+        await asyncio.sleep(1)
+    archive_path = archive_safely(print_folder, excluded_paths=['*.msgpack'])
+    with open(archive_path, 'rb') as data:
+        response = requests.put(file_url, data=data)
+        print(response.__dict__)
+    rmtree(print_folder)
+    remove(archive_path)
