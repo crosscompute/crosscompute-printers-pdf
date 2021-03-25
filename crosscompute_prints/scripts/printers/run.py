@@ -16,9 +16,11 @@ from crosscompute.routines import (
     yield_echo)
 from crosscompute.scripts import OutputtingScript, run_safely
 from glob import glob
-from invisibleroads_macros_disk import archive_safely, make_folder
+from invisibleroads_macros_disk import (
+    TemporaryStorage, archive_safely, make_folder)
 from os import remove
 from os.path import expanduser, join
+from PyPDF2 import PdfFileMerger, PdfFileReader
 from pyppeteer import launch
 from pyppeteer.errors import TimeoutError
 from shutil import rmtree
@@ -107,13 +109,41 @@ async def print_document(
             break
         except TimeoutError:
             os.system('pkill -9 chrome')
-    await page.pdf({
-        'path': target_path,
-        'printBackground': True,
-        'displayHeaderFooter': True,
-        'headerTemplate': document_dictionary.get('header') or '<span />',
-        'footerTemplate': document_dictionary.get('footer') or '<span />',
-    })
+
+    header_html = document_dictionary.get('header', '')
+    footer_html = document_dictionary.get('footer', '')
+    if 'visibility' in header_html or 'visibility' in footer_html:
+        with TemporaryStorage() as storage:
+            cover_path = join(storage.folder, 'cover.pdf')
+            document_path = join(storage.folder, 'document.pdf')
+            await page.pdf({
+                'path': cover_path,
+                'printBackground': True,
+                'displayHeaderFooter': True,
+                'headerTemplate': '<span />',
+                'footerTemplate': '<span />',
+                'pageRanges': '1',
+            })
+            await page.pdf({
+                'path': document_path,
+                'printBackground': True,
+                'displayHeaderFooter': True,
+                'headerTemplate': header_html or '<span />',
+                'footerTemplate': footer_html or '<span />',
+                'pageRanges': '2-',
+            })
+            target_pdf = PdfFileMerger()
+            target_pdf.append(PdfFileReader(cover_path))
+            target_pdf.append(PdfFileReader(document_path))
+            target_pdf.write(target_path)
+    else:
+        await page.pdf({
+            'path': target_path,
+            'printBackground': True,
+            'displayHeaderFooter': True,
+            'headerTemplate': header_html or '<span />',
+            'footerTemplate': footer_html or '<span />',
+        })
     await browser.close()
 
 

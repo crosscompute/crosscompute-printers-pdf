@@ -11,6 +11,7 @@ APPLICATION_CLASSIFIERS = [
 ]
 APPLICATION_REQUIREMENTS = [
     'crosscompute',
+    'pypdf2',
     'pyppeteer',
 ]
 TEST_REQUIREMENTS = [
