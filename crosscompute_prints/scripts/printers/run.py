@@ -86,7 +86,8 @@ def process_print_input_stream(event_dictionary, is_quiet, as_json):
         file_url = event_dictionary['@']
 
         def is_ready():
-            return len(glob(join(print_folder, '*.pdf'))) == document_count
+            new_document_count = len(glob(join(print_folder, '*.pdf')))
+            return new_document_count == document_count
 
         future = make_archive(is_ready, print_folder, file_url)
     asyncio.run(future)
@@ -99,8 +100,15 @@ async def print_document(
     document_index, document_dictionary = enumerated_document_dictionary
     target_name = document_dictionary['name']
     target_path = join(target_folder, target_name + '.pdf')
+
+    index = 2
+    while exists(target_path):
+        target_path = join(target_folder, target_name + f'-{index}.pdf')
+
     url = f'{client_url}/prints/{print_id}/documents/{document_index}'
-    print(url, target_path)
+    print('***')
+    print(url)
+    print(target_path)
     while True:
         browser = await launch()
         page = await browser.newPage()
