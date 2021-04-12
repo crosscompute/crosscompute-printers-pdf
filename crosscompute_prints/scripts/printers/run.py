@@ -19,7 +19,7 @@ from glob import glob
 from invisibleroads_macros_disk import (
     TemporaryStorage, archive_safely, make_folder)
 from os import remove
-from os.path import expanduser, join
+from os.path import exists, expanduser, join
 from PyPDF2 import PdfFileMerger, PdfFileReader
 from pyppeteer import launch
 from pyppeteer.errors import TimeoutError
