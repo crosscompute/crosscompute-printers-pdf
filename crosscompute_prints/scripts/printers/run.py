@@ -157,11 +157,29 @@ async def print_document(
         with TemporaryStorage() as storage:
             document_paths = []
             for (orientation, pages) in range_pages:
-                document_path = join(storage.folder, f'document-{pages[0]}.pdf')
-                document_paths.append(document_path)
-
                 landscape = orientation == 'landscape'
+
+                document_path = join(storage.folder, f'document-{pages[0]}.pdf')
                 pages_str = ','.join(pages)
+
+                if 'visibility' in header_html or 'visibility' in footer_html and len(pages) > 1 and 1 in pages:
+                    cover_path = join(storage.folder, 'cover.pdf')
+                    document_paths.append(cover_path)
+
+                    await page.pdf({
+                        'path': cover_path,
+                        'printBackground': True,
+                        'displayHeaderFooter': True,
+                        'headerTemplate': '<span />',
+                        'footerTemplate': '<span />',
+                        'pageRanges': '1',
+                        'landscape': landscape,
+                    })
+
+                    document_path = join(storage.folder, f'document-{pages[1]}.pdf')
+                    pages_str = ','.join(pages[1:])
+
+                document_paths.append(document_path)
 
                 await page.pdf({
                     'path': document_path,
