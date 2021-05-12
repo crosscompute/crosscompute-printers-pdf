@@ -64,6 +64,7 @@ def run_printer(is_quiet=False, as_json=False):
         except Exception:
             print_exception(*exc_info())
             time.sleep(1)
+
     return dict(d)
 
 
@@ -104,6 +105,7 @@ async def print_document(
     index = 2
     while exists(target_path):
         target_path = join(target_folder, target_name + f'-{index}.pdf')
+        index += 1
 
     url = f'{client_url}/prints/{print_id}/documents/{document_index}'
     print('***')
@@ -116,6 +118,7 @@ async def print_document(
             await page.goto(url, {'waitUntil': 'networkidle2'})
             break
         except TimeoutError:
+            # !!! Rethink whether this is still necessary
             os.system('pkill -9 chrome')
 
     header_html = document_dictionary.get('header', '')
