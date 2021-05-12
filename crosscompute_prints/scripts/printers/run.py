@@ -120,7 +120,64 @@ async def print_document(
 
     header_html = document_dictionary.get('header', '')
     footer_html = document_dictionary.get('footer', '')
-    if 'visibility' in header_html or 'visibility' in footer_html:
+
+    # Required to extract orientation on pages
+    styles_list = document_dictionary.get('styles', [])
+    styles = ''
+    if styles_list:
+        styles = styles_list[0]
+
+    await page.pdf({
+        'path': target_path,
+        'printBackground': True,
+        'displayHeaderFooter': True,
+        'headerTemplate': header_html or '<span />',
+        'footerTemplate': footer_html or '<span />',
+    })
+
+    raw_report = PdfFileReader(target_path)
+    orientations_by_page = get_orientations_from_css(styles)
+    pages_with_diff_orientation = get_page_ranges_from_orientation(orientations_by_page, raw_report.numPages)
+
+    general_orientation = 'portrait'
+    filter_by_general_orientation = [orientation[1] for orientation in orientations_by_page if
+                                     orientation[0] == 'general']
+    if len(filter_by_general_orientation):
+        general_orientation = filter_by_general_orientation[0]
+
+    in_word = 'landscape'
+    out_word = 'portrait'
+    if general_orientation == 'landscape':
+        in_word = 'portrait'
+        out_word = 'landscape'
+
+    range_pages = get_numeric_ranges(pages_with_diff_orientation, raw_report.numPages, in_word, out_word)
+
+    if pages_with_diff_orientation:
+        with TemporaryStorage() as storage:
+            document_paths = []
+            for (orientation, pages) in range_pages:
+                document_path = join(storage.folder, f'document-{pages[0]}.pdf')
+                document_paths.append(document_path)
+
+                landscape = orientation == 'landscape'
+                pages_str = ','.join(pages)
+
+                await page.pdf({
+                    'path': document_path,
+                    'printBackground': True,
+                    'displayHeaderFooter': True,
+                    'headerTemplate': header_html or '<span />',
+                    'footerTemplate': footer_html or '<span />',
+                    'pageRanges': pages_str,
+                    'landscape': landscape,
+                })
+
+            target_pdf = PdfFileMerger()
+            for path in document_paths:
+                target_pdf.append(PdfFileReader(path))
+            target_pdf.write(target_path)
+    elif 'visibility' in header_html or 'visibility' in footer_html:
         with TemporaryStorage() as storage:
             cover_path = join(storage.folder, 'cover.pdf')
             document_path = join(storage.folder, 'document.pdf')
@@ -144,14 +201,7 @@ async def print_document(
             target_pdf.append(PdfFileReader(cover_path))
             target_pdf.append(PdfFileReader(document_path))
             target_pdf.write(target_path)
-    else:
-        await page.pdf({
-            'path': target_path,
-            'printBackground': True,
-            'displayHeaderFooter': True,
-            'headerTemplate': header_html or '<span />',
-            'footerTemplate': footer_html or '<span />',
-        })
+
     await browser.close()
 
 
@@ -164,3 +214,106 @@ async def make_archive(is_ready, print_folder, file_url):
         print(response.__dict__)
     rmtree(print_folder)
     remove(archive_path)
+
+
+def has_orientation_rule(list_tokens):
+    size_token = None
+    literal_token = None
+    orientation_token = None
+    for token in list_tokens:
+        if token.type == 'ident' and token.lower_value == 'size':
+            size_token = token
+            literal_token = None
+            orientation_token = None
+        elif size_token and token.type == 'literal' and token.value == ':':
+            literal_token = token
+            orientation_token = None
+        elif literal_token and token.type == 'ident' and token.lower_value in ['portrait', 'landscape']:
+            orientation_token = token
+            break
+        elif token.type == 'whitespace':
+            pass
+        else:
+            size_token = None
+            literal_token = None
+            orientation_token = None
+
+    if size_token and literal_token and orientation_token:
+        return orientation_token.lower_value
+
+
+def get_orientations_from_css(css):
+    page_orientations = []
+    for token in css:
+        if token.type == 'at-rule' and token.lower_at_keyword == 'page':
+            if len(token.prelude) == 1:
+                orientation = has_orientation_rule(token.content)
+                if orientation:
+                    page_orientations.append(('general', orientation))
+
+            for rule in token.prelude:
+                if rule.type == 'ident':
+                    page_orientations.append(('keyword', rule.value, has_orientation_rule(token.content)))
+                elif rule.type == 'function':
+                    for arg in rule.arguments:
+                        page_orientations.append(
+                            ('function', rule.lower_name, arg.value, has_orientation_rule(token.content)))
+
+    return page_orientations
+
+
+def get_page_ranges_from_orientation(orientations, last_value=-1):
+    pages_with_diff_orientation = []
+    filter_by_general_orientation = [orientation[1] for orientation in orientations if orientation[0] == 'general']
+
+    general_orientation = 'portrait'
+    if len(filter_by_general_orientation):
+        general_orientation = filter_by_general_orientation[0]
+
+    for orientation in orientations:
+        if orientation[-1] != general_orientation:
+            if orientation[0] == 'keyword':
+                if orientation[1] == 'first':
+                    pages_with_diff_orientation.append(1)
+                if orientation[1] == 'last':
+                    pages_with_diff_orientation.append(last_value)
+            if orientation[0] == 'function':
+                if orientation[1] == 'nth-child':
+                    pages_with_diff_orientation.append(int(orientation[2]))
+
+    pages_with_diff_orientation = sorted(pages_with_diff_orientation)
+
+    if pages_with_diff_orientation and pages_with_diff_orientation[0] == -1:
+        return pages_with_diff_orientation[1:] + [pages_with_diff_orientation[0]]
+
+    return pages_with_diff_orientation
+
+
+def get_numeric_ranges(steps, limit, in_word='portrait', out_word='landscape'):
+    sorted_steps = sorted(steps)
+    ranges = []
+    current_range = []
+    even = False
+    for x in range(1, limit + 1):
+        if x in sorted_steps:
+            if even:
+                current_range.append(x)
+            else:
+                if current_range:
+                    ranges.append((out_word, current_range))
+                current_range = [x]
+                even = True
+        else:
+            if even:
+                if current_range:
+                    ranges.append((in_word, current_range))
+                current_range = [x]
+                even = False
+            else:
+                current_range.append(x)
+
+    if even:
+        ranges.append((in_word, current_range))
+    else:
+        ranges.append((out_word, current_range))
+    return ranges
