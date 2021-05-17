@@ -25,7 +25,9 @@ from pyppeteer import launch
 from pyppeteer.errors import TimeoutError
 from shutil import rmtree
 from sys import exc_info
+from tempfile import mkstemp
 from traceback import print_exception
+import tinycss2
 
 
 STORAGE_FOLDER = expanduser('~/.crosscompute')
@@ -79,6 +81,7 @@ def process_print_input_stream(event_dictionary, is_quiet, as_json):
         client_url = get_client_url()
         url = f'{server_url}/prints/{print_id}/documents/{document_index}.json'
         document_dictionary = requests.get(url).json()
+        # import pudb; pudb.set_trace()
         future = print_document(
             (document_index, document_dictionary), print_folder,
             client_url, print_id)
@@ -125,9 +128,10 @@ async def print_document(
 
     # Required to extract orientation on pages
     styles_list = document_dictionary.get('styles', [])
-    styles = ''
-    if styles_list:
-        styles = styles_list[0]
+    styles_text = '\n'.join(styles_list)
+    styles = tinycss2.parse_stylesheet(styles_text)
+    # if styles_list:
+    #    styles = styles_list[0]
 
     await page.pdf({
         'path': target_path,
@@ -139,32 +143,42 @@ async def print_document(
 
     raw_report = PdfFileReader(target_path)
     orientations_by_page = get_orientations_from_css(styles)
-    pages_with_diff_orientation = get_page_ranges_from_orientation(orientations_by_page, raw_report.numPages)
-
-    general_orientation = 'portrait'
-    filter_by_general_orientation = [orientation[1] for orientation in orientations_by_page if
-                                     orientation[0] == 'general']
+    print(orientations_by_page)
+    pages_with_diff_orientation = get_page_ranges_from_orientation(
+        orientations_by_page, raw_report.numPages)
+    print(pages_with_diff_orientation)
+    general_orientation = 'landscape'
+    filter_by_general_orientation = [
+        orientation[1] for orientation in orientations_by_page if
+        orientation[0] == 'general']
     if len(filter_by_general_orientation):
         general_orientation = filter_by_general_orientation[0]
 
-    in_word = 'landscape'
-    out_word = 'portrait'
+    print(general_orientation)
+
+    in_word = 'portrait'
+    out_word = 'landscape'
     if general_orientation == 'landscape':
-        in_word = 'portrait'
-        out_word = 'landscape'
+        in_word = 'landscape'
+        out_word = 'portrait'
 
-    range_pages = get_numeric_ranges(pages_with_diff_orientation, raw_report.numPages, in_word, out_word)
-
+    range_pages = get_numeric_ranges(
+        pages_with_diff_orientation, raw_report.numPages, in_word, out_word)
     if pages_with_diff_orientation:
         with TemporaryStorage() as storage:
             document_paths = []
             for (orientation, pages) in range_pages:
-                landscape = orientation == 'landscape'
+                landscape = orientation == 'landscape'  # predicate
+                print(orientation, pages, landscape)
+                document_path = join(
+                    storage.folder, f'document-{pages[0]}.pdf')
+                pages_str = ','.join([str(page) for page in pages])
 
-                document_path = join(storage.folder, f'document-{pages[0]}.pdf')
-                pages_str = ','.join(pages)
-
-                if 'visibility' in header_html or 'visibility' in footer_html and len(pages) > 1 and 1 in pages:
+                if (
+                    'visibility' in header_html or
+                    'visibility' in footer_html and
+                    len(pages) > 1 and 1 in pages
+                ):
                     cover_path = join(storage.folder, 'cover.pdf')
                     document_paths.append(cover_path)
 
@@ -175,14 +189,14 @@ async def print_document(
                         'headerTemplate': '<span />',
                         'footerTemplate': '<span />',
                         'pageRanges': '1',
-                        'landscape': landscape,
+                        'landScape': landscape,  # True or False
                     })
 
-                    document_path = join(storage.folder, f'document-{pages[1]}.pdf')
-                    pages_str = ','.join(pages[1:])
+                    document_path = join(
+                        storage.folder, f'document-{pages[1]}.pdf')
+                    pages_str = ','.join([str(page) for page in pages[1:]])
 
                 document_paths.append(document_path)
-
                 await page.pdf({
                     'path': document_path,
                     'printBackground': True,
@@ -241,6 +255,9 @@ def has_orientation_rule(list_tokens):
     literal_token = None
     orientation_token = None
     for token in list_tokens:
+        # 1. @general { size: landscape; color: blue } DONE
+
+        # [ size: landscape, color: blue ]
         if token.type == 'ident' and token.lower_value == 'size':
             size_token = token
             literal_token = None
@@ -248,7 +265,10 @@ def has_orientation_rule(list_tokens):
         elif size_token and token.type == 'literal' and token.value == ':':
             literal_token = token
             orientation_token = None
-        elif literal_token and token.type == 'ident' and token.lower_value in ['portrait', 'landscape']:
+        elif (
+            literal_token and token.type == 'ident' and token.lower_value in [
+                'portrait', 'landscape']
+        ):
             orientation_token = token
             break
         elif token.type == 'whitespace':
@@ -264,29 +284,38 @@ def has_orientation_rule(list_tokens):
 
 def get_orientations_from_css(css):
     page_orientations = []
+    print(css)
     for token in css:
+        print(token)
         if token.type == 'at-rule' and token.lower_at_keyword == 'page':
-            if len(token.prelude) == 1:
+            print('---- prelude ')
+            print(token.prelude)
+            if len(token.prelude) <= 1:  # Remove all withespace tokens
                 orientation = has_orientation_rule(token.content)
                 if orientation:
                     page_orientations.append(('general', orientation))
 
             for rule in token.prelude:
                 if rule.type == 'ident':
-                    page_orientations.append(('keyword', rule.value, has_orientation_rule(token.content)))
+                    page_orientations.append((
+                        'keyword', rule.value,
+                        has_orientation_rule(token.content)))
                 elif rule.type == 'function':
                     for arg in rule.arguments:
-                        page_orientations.append(
-                            ('function', rule.lower_name, arg.value, has_orientation_rule(token.content)))
+                        page_orientations.append((
+                            'function', rule.lower_name, arg.value,
+                            has_orientation_rule(token.content)))
 
     return page_orientations
 
 
 def get_page_ranges_from_orientation(orientations, last_value=-1):
     pages_with_diff_orientation = []
-    filter_by_general_orientation = [orientation[1] for orientation in orientations if orientation[0] == 'general']
+    filter_by_general_orientation = [
+        orientation[1] for orientation in orientations
+        if orientation[0] == 'general']
 
-    general_orientation = 'portrait'
+    general_orientation = 'landscape'
     if len(filter_by_general_orientation):
         general_orientation = filter_by_general_orientation[0]
 
@@ -303,13 +332,18 @@ def get_page_ranges_from_orientation(orientations, last_value=-1):
 
     pages_with_diff_orientation = sorted(pages_with_diff_orientation)
 
+    # general = lanscape
+    # [-1, 2, 3, 4]
+    # [2, 3, 4, -1]
     if pages_with_diff_orientation and pages_with_diff_orientation[0] == -1:
-        return pages_with_diff_orientation[1:] + [pages_with_diff_orientation[0]]
+        return pages_with_diff_orientation[1:] + [
+            pages_with_diff_orientation[0]]
 
     return pages_with_diff_orientation
 
 
 def get_numeric_ranges(steps, limit, in_word='portrait', out_word='landscape'):
+    # [('portrait', [1,2,3,4,5]), ('landscape', [6]), ]
     sorted_steps = sorted(steps)
     ranges = []
     current_range = []
