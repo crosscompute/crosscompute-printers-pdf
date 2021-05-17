@@ -25,6 +25,7 @@ from pyppeteer import launch
 from pyppeteer.errors import TimeoutError
 from shutil import rmtree
 from sys import exc_info
+from tempfile import mkstemp
 from traceback import print_exception
 
 
@@ -101,9 +102,9 @@ async def print_document(
     target_name = document_dictionary['name']
     target_path = join(target_folder, target_name + '.pdf')
 
-    index = 2
-    while exists(target_path):
-        target_path = join(target_folder, target_name + f'-{index}.pdf')
+    if exists(target_path):
+        target_path = mkstemp(
+            suffix='.pdf', prefix=target_name + '-', dir=target_folder)[1]
 
     url = f'{client_url}/prints/{print_id}/documents/{document_index}'
     print('***')
