@@ -1,0 +1,8 @@
+{
+	"name": "crosscompute-renderers-pdf",
+	"version": "0.1.0",
+	"dependencies":{
+		"express": ">=4.17.2",
+		"puppeteer": ">=13.2.0"
+	}
+}
