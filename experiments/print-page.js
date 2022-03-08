@@ -7,10 +7,7 @@ const targetPath = args[1];
 (async () => {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
-  await page.goto(sourceUrl, {
-    waitUntil: 'networkidle2',
-  });
-  await page.pdf({ path: targetPath, format: 'a4' });
-
+  await page.goto(sourceUrl, { waitUntil: 'networkidle2' });
+  await page.pdf({ path: targetPath });
   await browser.close();
 })();
