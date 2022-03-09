@@ -36,7 +36,7 @@ const go = async (serverUri, batchDictionaries, baseFolder) => {
     const sourceUri = serverUri + batchDictionary.uri;
     if (isReady(sourceUri)) {
       const targetPath = `${baseFolder}/${batchName}.pdf`;
-      await print(sourceUri + '/o', targetPath);
+      await print(sourceUri + '/o?p', targetPath);
     } else {
       batchDictionaries.push(batchDictionary);
     }
