@@ -1,21 +1,21 @@
-# CrossCompute Prints
+# PDF Printers for CrossCompute
 
 ## Installation
 
-```
-curl --silent --location https://dl.yarnpkg.com/rpm/yarn.repo | sudo tee /etc/yum.repos.d/yarn.repo
-sudo dnf -y install nodejs yarn
-sudo dnf -y install chromium
-# sudo dnf -y install freetype-devel
-# sudo dnf -y install libXScrnSaver-devel
-# sudo dnf -y install libX11-xcb libXcomposite libXcursor libXdamage libXext libXi libXtst libXss libXScrnSaver libXrandr libasound alsa-lib
-pip install -e .
+```bash
+# Install node version manager
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
+# Install latest version of node
+nvm install node
+# Install dependencies globally
+npm install -g express puppeteer
+# Install package
+pip install crosscompute-printers-pdf
 ```
 
-## Troubleshooting
+## Usage
 
-```
-BrowserError: Browser closed unexpectedly: 
-
-$(python -c "from pyppeteer.launcher import Launcher; print(' '.join(Launcher().cmd))")
+```bash
+# Batch print
+crosscompute --print pdf --print-folder /tmp/abc
 ```
