@@ -66,7 +66,6 @@ def run_printer(is_quiet=False, as_json=False):
         except Exception:
             print_exception(*exc_info())
             time.sleep(1)
-
     return dict(d)
 
 
@@ -81,7 +80,6 @@ def process_print_input_stream(event_dictionary, is_quiet, as_json):
         client_url = get_client_url()
         url = f'{server_url}/prints/{print_id}/documents/{document_index}.json'
         document_dictionary = requests.get(url).json()
-        # import pudb; pudb.set_trace()
         future = print_document(
             (document_index, document_dictionary), print_folder,
             client_url, print_id)
@@ -109,7 +107,6 @@ async def print_document(
         target_path = mkstemp(
             suffix='.pdf', prefix=target_name + '-', dir=target_folder)[1]
 
-
     url = f'{client_url}/prints/{print_id}/documents/{document_index}'
     print('***')
     print(url)
@@ -121,7 +118,6 @@ async def print_document(
             await page.goto(url, {'waitUntil': 'networkidle2'})
             break
         except TimeoutError:
-            # !!! Rethink whether this is still necessary
             os.system('pkill -9 chrome')
 
     header_html = document_dictionary.get('header', '')
