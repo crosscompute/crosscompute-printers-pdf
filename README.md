@@ -8,7 +8,7 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
 # Install latest version of node
 nvm install node
 # Install dependencies globally
-npm install -g express puppeteer
+npm install -g express pdf-merger-js puppeteer
 # Install package
 pip install crosscompute-printers-pdf
 ```

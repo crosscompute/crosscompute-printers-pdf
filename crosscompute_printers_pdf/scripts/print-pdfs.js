@@ -2,8 +2,10 @@
 
 const fs = require('fs');
 const http = require('http');
+const os = require('os');
 const path = require('path');
 
+const PDFMerger = require('pdf-merger-js');
 const express = require('express');
 const puppeteer = require('puppeteer');
 
@@ -19,7 +21,6 @@ const go = async (
   batchDictionaries,
   printDefinition
 ) => {
-  console.log(`saving prints to ${baseFolder}`);
   await initialize();
   while (batchDictionaries.length) {
     const batchDictionary = batchDictionaries.pop();
@@ -46,35 +47,79 @@ const isReady = async (batchUri) => {
 };
 const print = async (sourceUri, targetPath, printDefinition) => {
   console.log(`printing ${sourceUri} to ${targetPath}`);
+  const headerFooterOptions = printDefinition['header-footer'];
+  const skipFirst = headerFooterOptions?.['skip-first'];
   const pageNumberOptions = printDefinition['page-number'];
-  const pageNumberLocation = pageNumberOptions['location'];
-  const pageNumberTemplate = '<div style="width: 100vw; font-family: sans-serif; font-size: 8pt; color: #808080; display: flex; justify-content: space-between; align-items: flex-end; padding-right: 0.25in; padding-bottom: 0.1in;"><div></div><div><span class="pageNumber"></span></div></div>';
+  const pageNumberLocation = pageNumberOptions?.['location'];
+  const containerHtml = getContainerHtml(printDefinition);
   let displayHeaderFooter = false;
-  let headerTemplate = '<span />';
-  let footerTemplate = '<span />';
-  if (pageNumberLocation === 'header') {
-    displayHeaderFooter = true;
-    headerTemplate = pageNumberTemplate;
-  } else if (pageNumberLocation === 'footer') {
-    displayHeaderFooter = true;
-    footerTemplate = pageNumberTemplate;
+  let headerTemplate = '<span />', footerTemplate = '<span />';
+  switch (pageNumberLocation) {
+    case 'header': {
+      displayHeaderFooter = true;
+      headerTemplate = containerHtml;
+      break;
+    }
+    case 'footer': {
+      displayHeaderFooter = true;
+      footerTemplate = containerHtml;
+      break;
+    }
   }
-
-  if (page_number_settings) {
-    page_number_settings['alignment']
-    page_number_settings['font-family']
-    page_number_settings['font-size']
-    page_number_settings['color']
-    page_number_settings['padding']
-    page_number_settings['skip-first']
-  }
+  const pdfOptions = {
+    path: targetPath, preferCSSPageSize: true, displayHeaderFooter,
+    headerTemplate, footerTemplate};
   await page.goto(sourceUri, { waitUntil: 'networkidle2' });
-  await page.pdf({
-    path: targetPath,
-    displayHeaderFooter,
-    headerTemplate,
-    footerTemplate,
-  });
+  await savePdf(page, pdfOptions, skipFirst);
+}
+const getContainerHtml = (printDefinition) => {
+  const headerFooterOptions = printDefinition['header-footer'];
+  const fontFamily = headerFooterOptions?.['font-family'] || 'sans-serif';
+  const fontSize = headerFooterOptions?.['font-size'] || '8pt';
+  const color = headerFooterOptions?.['color'] || '#808080';
+  const padding = headerFooterOptions?.['padding'] || '0.1in 0.25in';
+  const pageNumberOptions = printDefinition['page-number'];
+  const pageNumberAlignment = pageNumberOptions?.['alignment'] || 'right';
+  const pageNumberHtml = '<span class="pageNumber"></span>';
+  let contentHtml = '';
+  switch (pageNumberAlignment) {
+    case 'left': {
+      contentHtml = `<div>${pageNumberHtml}</div>`;
+      break;
+    }
+    case 'center': {
+      contentHtml = `<div></div><div>${pageNumberHtml}</div><div></div>`;
+      break;
+    }
+    case 'right': {
+      contentHtml = `<div></div><div>${pageNumberHtml}</div>`;
+      break;
+    }
+  }
+  return `<div style="width: 100vw; display: flex; justify-content: space-between; font-family: ${fontFamily}; font-size: ${fontSize}; color: ${color}; padding: ${padding};">${contentHtml}</div>`;
+}
+const savePdf = async (page, pdfOptions, skipFirst) => {
+  if (skipFirst) {
+    const TEMPORARY_FOLDER = os.homedir() + '/.tmp';
+    fs.mkdirSync(TEMPORARY_FOLDER, { recursive: true });
+    const temporaryFolder = fs.mkdtempSync(TEMPORARY_FOLDER + '/');
+    const headPath = temporaryFolder + '/head.pdf';
+    const bodyPath = temporaryFolder + '/body.pdf';
+    await page.pdf({
+      path: headPath,
+      preferCSSPageSize: true,
+      displayHeaderFooter: false,
+      pageRanges: '1',
+    });
+    await page.pdf({...pdfOptions, path: bodyPath, pageRanges: '2-'});
+    const pdfMerger = new PDFMerger();
+    pdfMerger.add(headPath);
+    pdfMerger.add(bodyPath);
+    await pdfMerger.save(pdfOptions['path']);
+    fs.rmSync(temporaryFolder, { recursive: true });
+  } else {
+    await page.pdf({...pdfOptions});
+  }
 }
 
 const serverUri = d.uri;
