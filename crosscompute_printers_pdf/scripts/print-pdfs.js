@@ -46,9 +46,21 @@ const isReady = async (batchUri) => {
 };
 const print = async (sourceUri, targetPath, printDefinition) => {
   console.log(`printing ${sourceUri} to ${targetPath}`);
-  const page_number_settings = printDefinition['page-number']
+  const pageNumberOptions = printDefinition['page-number'];
+  const pageNumberLocation = pageNumberOptions['location'];
+  const pageNumberTemplate = '<div style="width: 100vw; font-family: sans-serif; font-size: 8pt; color: #808080; display: flex; justify-content: space-between; align-items: flex-end; padding-right: 0.25in; padding-bottom: 0.1in;"><div></div><div><span class="pageNumber"></span></div></div>';
+  let displayHeaderFooter = false;
+  let headerTemplate = '<span />';
+  let footerTemplate = '<span />';
+  if (pageNumberLocation === 'header') {
+    displayHeaderFooter = true;
+    headerTemplate = pageNumberTemplate;
+  } else if (pageNumberLocation === 'footer') {
+    displayHeaderFooter = true;
+    footerTemplate = pageNumberTemplate;
+  }
+
   if (page_number_settings) {
-    page_number_settings['location']
     page_number_settings['alignment']
     page_number_settings['font-family']
     page_number_settings['font-size']
@@ -56,18 +68,13 @@ const print = async (sourceUri, targetPath, printDefinition) => {
     page_number_settings['padding']
     page_number_settings['skip-first']
   }
-  // await page.goto(sourceUri, { waitUntil: 'networkidle2' });
-  // await page.pdf({ path: targetPath });
-  // displayHeaderFooter: true,
-  // headerTemplate: '<span />'
-  // footerTemplate: x,
-}
-const getPdfOptions = (printDefinition) => {
-  return {
-    // 'displayHeaderFooter':
-    // 'headerTemplate':
-    // 'footerTemplate':
-  }
+  await page.goto(sourceUri, { waitUntil: 'networkidle2' });
+  await page.pdf({
+    path: targetPath,
+    displayHeaderFooter,
+    headerTemplate,
+    footerTemplate,
+  });
 }
 
 const serverUri = d.uri;
