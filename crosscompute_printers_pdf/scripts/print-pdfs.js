@@ -47,11 +47,12 @@ const isReady = async (batchUri) => {
 };
 const print = async (sourceUri, targetPath, printDefinition) => {
   console.log(`printing ${sourceUri} to ${targetPath}`);
-  const headerFooterOptions = printDefinition['header-footer'];
+  const printConfiguration = printDefinition['configuration'];
+  const headerFooterOptions = printConfiguration['header-footer'];
   const skipFirst = headerFooterOptions?.['skip-first'];
-  const pageNumberOptions = printDefinition['page-number'];
+  const pageNumberOptions = printConfiguration['page-number'];
   const pageNumberLocation = pageNumberOptions?.['location'];
-  const containerHtml = getContainerHtml(printDefinition);
+  const containerHtml = getContainerHtml(printConfiguration);
   let displayHeaderFooter = false;
   let headerTemplate = '<span />', footerTemplate = '<span />';
   switch (pageNumberLocation) {
@@ -72,13 +73,13 @@ const print = async (sourceUri, targetPath, printDefinition) => {
   await page.goto(sourceUri, { waitUntil: 'networkidle2' });
   await savePdf(page, pdfOptions, skipFirst);
 }
-const getContainerHtml = (printDefinition) => {
-  const headerFooterOptions = printDefinition['header-footer'];
+const getContainerHtml = (printConfiguration) => {
+  const headerFooterOptions = printConfiguration['header-footer'];
   const fontFamily = headerFooterOptions?.['font-family'] || 'sans-serif';
   const fontSize = headerFooterOptions?.['font-size'] || '8pt';
   const color = headerFooterOptions?.['color'] || '#808080';
   const padding = headerFooterOptions?.['padding'] || '0.1in 0.25in';
-  const pageNumberOptions = printDefinition['page-number'];
+  const pageNumberOptions = printConfiguration['page-number'];
   const pageNumberAlignment = pageNumberOptions?.['alignment'] || 'right';
   const pageNumberHtml = '<span class="pageNumber"></span>';
   let contentHtml = '';
