@@ -97,7 +97,7 @@ const getContainerHtml = (printConfiguration) => {
       break;
     }
   }
-  return `<div style="width: 100vw; display: flex; justify-content: space-between; font-family: ${fontFamily}; font-size: ${fontSize}; color: ${color}; padding: ${padding};">${contentHtml}</div>`;
+  return `<section style="width: 100vw; display: flex; justify-content: space-between; font-family: ${fontFamily}; font-size: ${fontSize}; color: ${color}; padding: ${padding};">${contentHtml}</section>`;
 }
 const savePdf = async (page, pdfOptions, skipFirst) => {
   if (skipFirst) {
