@@ -8,10 +8,14 @@
 .coverage
 .ipynb_checkpoints
 .pytest_cache
+.tox
 __pycache__
 build/
 dist/
-.tox
+# node
+node_modules
+package-lock.json
+yarn.lock
 # transient
 *.log
 *.tmp

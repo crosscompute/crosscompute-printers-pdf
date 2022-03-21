@@ -13,7 +13,6 @@ class PdfPrinter(BatchPrinter):
             with open(path, 'wt') as f:
                 json.dump({
                     'uri': self.server_uri,
-                    'folder': self.target_folder,
                     'batch_dictionaries': batch_dictionaries,
                     'print_definition': print_definition,
                 }, f)

@@ -1,7 +1,6 @@
 'use strict';
 
 const fs = require('fs');
-const http = require('http');
 const os = require('os');
 const path = require('path');
 
@@ -17,17 +16,17 @@ let browser, page;
 
 const go = async (
   serverUri,
-  baseFolder,
   batchDictionaries,
   printDefinition
 ) => {
   await initialize();
   while (batchDictionaries.length) {
     const batchDictionary = batchDictionaries.pop();
-    const batchName = batchDictionary.name;
     const sourceUri = serverUri + batchDictionary.uri;
     if (isReady(sourceUri)) {
-      const targetPath = `${baseFolder}/${batchName}.pdf`;
+      const targetPath = batchDictionary.path;
+      const targetFolder = path.dirname(targetPath);
+      fs.mkdirSync(targetFolder, { recursive: true });
       await print(sourceUri + '/o?p', targetPath, printDefinition);
     } else {
       batchDictionaries.push(batchDictionary);
@@ -124,7 +123,6 @@ const savePdf = async (page, pdfOptions, skipFirst) => {
 }
 
 const serverUri = d.uri;
-const baseFolder = d.folder;
 const batchDictionaries = d.batch_dictionaries;
 const printDefinition = d.print_definition;
-go(serverUri, baseFolder, batchDictionaries, printDefinition);
+go(serverUri, batchDictionaries, printDefinition);

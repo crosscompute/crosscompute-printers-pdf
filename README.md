@@ -3,22 +3,42 @@
 ## Installation
 
 ```bash
-# Install node version manager
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
-# Reload bash configuration
-source ~/.bashrc
+# Install packages
+sudo dnf -y install chromium node
 # Install latest version of node
-nvm install node
-# Install dependencies globally
-sudo dnf -y install chromium
-npm install -g express pdf-merger-js puppeteer
+npm cache clean -f
+npm install -g n
+sudo n latest
 # Install package
 pip install crosscompute-printers-pdf
+# Install dependencies 
+cd $(python -c "import crosscompute_printers_pdf; print(crosscompute_printers_pdf.__path__[0] + '/scripts')")
+npm install
 ```
 
 ## Usage
 
+1. Add prints to your configuration file.
+
+```yaml
+prints:
+  - format: pdf
+    configuration:
+      header-footer:
+          font-family: sans-serif
+          font-size: 8pt
+          color: '#808080'
+          padding: 0.1in 0.25in
+          skip-first: true
+      page-number:
+          location: footer
+          alignment: right
+    folder: ~/Documents/attachments/randomize-histograms-{timestamp}
+    name: me{mean}-va{variance}-vc{value_count}-bc{bin_count}.pdf
+```
+
+2. Run batch print.
+
 ```bash
-# Batch print
-crosscompute --print pdf --print-folder /tmp/abc
+crosscompute --print
 ```
