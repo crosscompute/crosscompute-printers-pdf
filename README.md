@@ -11,7 +11,7 @@ npm install -g n
 sudo n latest
 # Install package
 pip install crosscompute-printers-pdf
-# Install dependencies 
+# Install dependencies
 cd $(python -c "import crosscompute_printers_pdf; print(crosscompute_printers_pdf.__path__[0] + '/scripts')")
 npm install
 ```
