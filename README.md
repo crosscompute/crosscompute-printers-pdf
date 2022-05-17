@@ -6,8 +6,8 @@
 # Install packages
 sudo dnf -y install chromium node
 # Install latest version of node
-npm cache clean -f
-npm install -g n
+sudo npm cache clean -f
+sudo npm install -g n
 sudo n latest
 # Install package
 pip install crosscompute-printers-pdf
