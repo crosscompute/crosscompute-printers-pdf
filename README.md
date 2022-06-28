@@ -4,7 +4,7 @@
 
 ```bash
 # Install packages
-sudo dnf -y install chromium node
+sudo dnf -y install chromium npm
 # Install latest version of node
 sudo npm cache clean -f
 sudo npm install -g n
