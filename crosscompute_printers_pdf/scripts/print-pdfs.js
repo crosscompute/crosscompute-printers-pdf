@@ -27,7 +27,7 @@ const go = async (
       const targetPath = batchDictionary.path;
       const targetFolder = path.dirname(targetPath);
       fs.mkdirSync(targetFolder, { recursive: true });
-      await print(sourceUri + '/o?p', targetPath, printDefinition);
+      await print(sourceUri + '/o?_print', targetPath, printDefinition);
     } else {
       batchDictionaries.push(batchDictionary);
     }
