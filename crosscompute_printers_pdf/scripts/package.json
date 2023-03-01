@@ -1,7 +1,7 @@
 {
   "dependencies": {
-    "express": "^4.17.3",
-    "pdf-merger-js": "^3.4.0",
-    "puppeteer": "^13.5.1"
+    "express": "^4.18.2",
+    "pdf-merger-js": "^4.2.1",
+    "puppeteer": "^19.7.2"
   }
 }
