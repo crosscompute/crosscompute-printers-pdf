@@ -17,7 +17,7 @@ let browser, page;
 const go = async (
   serverUri,
   batchDictionaries,
-  printDefinition
+  printConfiguration
 ) => {
   await initialize();
   while (batchDictionaries.length) {
@@ -27,7 +27,7 @@ const go = async (
       const targetPath = batchDictionary.path;
       const targetFolder = path.dirname(targetPath);
       fs.mkdirSync(targetFolder, { recursive: true });
-      await print(sourceUri + '/o?_print', targetPath, printDefinition);
+      await print(sourceUri + '/o?_print', targetPath, printConfiguration);
     } else {
       batchDictionaries.push(batchDictionary);
     }
@@ -44,9 +44,8 @@ const isReady = async (batchUri) => {
   const returnCode = parseInt(responseText);
   return returnCode == 0;
 };
-const print = async (sourceUri, targetPath, printDefinition) => {
+const print = async (sourceUri, targetPath, printConfiguration) => {
   console.log(`printing ${sourceUri} to ${targetPath}`);
-  const printConfiguration = printDefinition['configuration'];
   const headerFooterOptions = printConfiguration['header-footer'];
   const skipFirst = headerFooterOptions?.['skip-first'];
   const pageNumberOptions = printConfiguration['page-number'];
@@ -122,7 +121,4 @@ const savePdf = async (page, pdfOptions, skipFirst) => {
   }
 }
 
-const serverUri = d.uri;
-const batchDictionaries = d.batch_dictionaries;
-const printDefinition = d.print_definition;
-go(serverUri, batchDictionaries, printDefinition);
+go(d.uri, d.dictionaries, d.configuration);

@@ -7,14 +7,14 @@ from pathlib import Path
 
 class PdfPrinter(BatchPrinter):
 
-    def render(self, batch_dictionaries, print_definition):
+    def render(self, batch_dictionaries, variable_configuration):
         with TemporaryStorage() as storage:
             path = Path(storage.folder) / 'printer-configuration.json'
             with open(path, 'wt') as f:
                 json.dump({
                     'uri': self.server_uri,
-                    'batch_dictionaries': batch_dictionaries,
-                    'print_definition': print_definition,
+                    'dictionaries': batch_dictionaries,
+                    'configuration': variable_configuration,
                 }, f)
             subprocess.run([
                 'node',
