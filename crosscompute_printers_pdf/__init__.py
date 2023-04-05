@@ -1,15 +1,18 @@
 import json
 import subprocess
+from pathlib import Path
+
 from crosscompute.routines.printer import BatchPrinter
 from invisibleroads_macros_disk import TemporaryStorage
-from pathlib import Path
 
 
 class PdfPrinter(BatchPrinter):
 
+    view_name = 'pdf'
+
     def render(self, batch_dictionaries, print_configurations):
         with TemporaryStorage() as storage:
-            path = Path(storage.folder) / 'printer-configuration.json'
+            path = Path(storage.folder) / 'c.json'
             with open(path, 'wt') as f:
                 json.dump({
                     'uri': self.server_uri,
@@ -19,7 +22,7 @@ class PdfPrinter(BatchPrinter):
             subprocess.run([
                 'node',
                 '--experimental-fetch',
-                PACKAGE_FOLDER / 'scripts' / 'print-pdfs.js',
+                PACKAGE_FOLDER / 'scripts' / 'print.js',
                 path])
 
 
