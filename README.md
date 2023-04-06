@@ -21,20 +21,22 @@ npm install
 1. Add prints to your configuration file.
 
 ```yaml
-prints:
-  - format: pdf
-    configuration:
-      header-footer:
+print:
+  variables:
+    - id: report
+      view: pdf
+      path: report.pdf
+      configuration:
+        header-footer:
           font-family: sans-serif
           font-size: 8pt
           color: '#808080'
           padding: 0.1in 0.25in
           skip-first: true
-      page-number:
+        page-number:
           location: footer
           alignment: right
-    folder: ~/Documents/attachments/randomize-histograms-{timestamp}
-    name: me{mean}-va{variance}-vc{value_count}-bc{bin_count}.pdf
+        name: 'm{mean}-v{variance}-{timestamp}.pdf'
 ```
 
 2. Run batch print.
