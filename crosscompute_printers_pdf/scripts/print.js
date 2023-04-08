@@ -112,10 +112,13 @@ const savePdf = async (page, pdfOptions, skipFirst) => {
       displayHeaderFooter: false,
       pageRanges: '1',
     });
-    await page.pdf({...pdfOptions, path: bodyPath, pageRanges: '2-'});
     const pdfMerger = new PDFMerger();
-    pdfMerger.add(headPath);
-    pdfMerger.add(bodyPath);
+    await pdfMerger.add(headPath);
+    try {
+      await page.pdf({...pdfOptions, path: bodyPath, pageRanges: '2-'});
+      await pdfMerger.add(bodyPath);
+    } catch {
+    }
     await pdfMerger.save(pdfOptions['path']);
     fs.rmSync(temporaryFolder, { recursive: true });
   } else {
