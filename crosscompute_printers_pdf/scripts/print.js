@@ -1,5 +1,7 @@
 'use strict';
 
+const CHROMIUM_PATH = process.env.CHROMIUM_PATH || 'chromium-browser';
+
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -37,7 +39,10 @@ const go = async (
   await browser.close();
 }
 const initialize = async () => {
-  browser = await puppeteer.launch();
+  browser = await puppeteer.launch({
+    headless: 'new',
+    executablePath: CHROMIUM_PATH,
+  });
   page = await browser.newPage();
 }
 const isReady = async (batchUri) => {
