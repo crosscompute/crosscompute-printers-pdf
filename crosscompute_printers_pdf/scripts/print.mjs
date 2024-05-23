@@ -2,13 +2,13 @@
 
 const CHROMIUM_PATH = process.env.CHROMIUM_PATH || 'chromium-browser';
 
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
-const PDFMerger = require('pdf-merger-js');
-const express = require('express');
-const puppeteer = require('puppeteer');
+import PDFMerger from 'pdf-merger-js';
+import express from 'express';
+import puppeteer from 'puppeteer';
 
 const args = process.argv.slice(2);
 const dataPath = args[0];

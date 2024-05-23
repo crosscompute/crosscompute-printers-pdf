@@ -22,7 +22,7 @@ class PdfPrinter(BatchPrinter):
             subprocess.run([
                 'node',
                 '--experimental-fetch',
-                PACKAGE_FOLDER / 'scripts' / 'print.js',
+                PACKAGE_FOLDER / 'scripts' / 'print.mjs',
                 path])
 
 
