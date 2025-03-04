@@ -73,8 +73,12 @@ const print = async (sourceUri, targetPath, printConfiguration) => {
     }
   }
   const pdfOptions = {
-    path: targetPath, preferCSSPageSize: true, displayHeaderFooter,
-    headerTemplate, footerTemplate};
+    path: targetPath,
+    preferCSSPageSize: true,
+    printBackground: true,
+    displayHeaderFooter,
+    headerTemplate,
+    footerTemplate};
   await page.goto(sourceUri, { waitUntil: 'networkidle2' });
   await savePdf(page, pdfOptions, skipFirst);
 }
@@ -114,6 +118,7 @@ const savePdf = async (page, pdfOptions, skipFirst) => {
     await page.pdf({
       path: headPath,
       preferCSSPageSize: true,
+      printBackground: true,
       displayHeaderFooter: false,
       pageRanges: '1',
     });
